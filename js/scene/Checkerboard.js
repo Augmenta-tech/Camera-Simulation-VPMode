@@ -12,8 +12,8 @@ import {
 import { DoubleSide } from 'three';
 import { TextGeometry } from 'three-text-geometry';
 
-import { units } from '/js/data.js'
-import { SceneManager } from '/js/scene/SceneManager.js'
+import { units } from '../data.js'
+import { SceneManager } from './SceneManager.js'
 
 class Checkerboard{
     static SIZE_TEXT_SCENE = 0.3;
