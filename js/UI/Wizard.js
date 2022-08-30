@@ -66,6 +66,7 @@ class Wizard{
             document.getElementById('input-scene-width-wizard').value = Math.round(sceneManager.sceneWidth * sceneManager.currentUnit.value * 100) / 100.0;
             document.getElementById('input-scene-height-wizard').value = Math.round(sceneManager.sceneHeight * sceneManager.currentUnit.value * 100) / 100.0;
             document.getElementById('input-hook-height-wizard').value = parseFloat(document.getElementById('input-hook-height-wizard').value) > 0 ? document.getElementById('input-hook-height-wizard').value : Math.round(4.5 * sceneManager.currentUnit.value * 100) / 100.0;
+            document.getElementById('input-percent-overlap-wizard'). value = parseFloat(document.getElementById('input-percent-overlap-wizard').value) > 0 ? document.getElementById('input-percent-overlap-wizard').value : 15;
         }
 
         function addCamTypesToForm(){

@@ -31,7 +31,7 @@ class UIManager{
             for(let i = 0; i < inputs.length; i++)
             {
                 inputs[i].dataset.unit = SceneManager.DEFAULT_UNIT.value;
-                if(inputs[i].id != 'input-hook-height-wizard') inputs[i].value = 5*SceneManager.DEFAULT_UNIT.value;
+                if(inputs[i].id != 'input-hook-height-wizard' && inputs[i].id != 'input-percent-overlap-wizard') inputs[i].value = 5*SceneManager.DEFAULT_UNIT.value;
                 else inputs[i].value = '';
             }
         }
