@@ -22,17 +22,7 @@ class UIManager{
             document.getElementById("input-scene-width-inspector").addEventListener('change', () => sceneManager.updateAugmentaSceneBorder(parseFloat(document.getElementById("input-scene-width-inspector").value), parseFloat(document.getElementById("input-scene-height-inspector").value)));
             document.getElementById("input-scene-height-inspector").addEventListener('change', () => sceneManager.updateAugmentaSceneBorder(parseFloat(document.getElementById("input-scene-width-inspector").value), parseFloat(document.getElementById("input-scene-height-inspector").value)));
 
-
-            document.getElementById("tracking-mode-selection-inspector").addEventListener('change', () => {
-                const mode = document.getElementById("tracking-mode-selection-inspector").value;
-                sceneManager.changeTrackingMode(mode);
-                changeTrackingMode(mode);
-                this.displayWarning(sceneManager);
-            });
-            document.getElementById("overlap-height-selection-inspector").addEventListener('change', () => sceneManager.heightDetected = parseFloat(document.getElementById("overlap-height-selection-inspector").value));
-            
-
-            this.wizard.bindEventListeners(viewportManager, this);
+            this.wizard.bindEventListeners(viewportManager);
         }
 
         function resetValues()
@@ -44,8 +34,6 @@ class UIManager{
                 if(inputs[i].id != 'input-hook-height-wizard') inputs[i].value = 5*SceneManager.DEFAULT_UNIT.value;
                 else inputs[i].value = '';
             }
-
-            document.getElementById("tracking-mode-selection-inspector").value = 'human-tracking';
         }
 
         function copyLink(link)
@@ -54,42 +42,6 @@ class UIManager{
 
             document.getElementById("share-modal").classList.remove('hidden');
             window.setTimeout(() => document.getElementById("share-modal").classList.add('hidden'), 1500);
-        }
-
-        function changeTrackingMode(trackingMode)
-        {
-            switch(trackingMode)
-            {
-                case 'hand-tracking':
-                    document.getElementById('overlap-height-inspector').classList.add('hidden');
-                    break;
-                case 'human-tracking':
-                default:
-                    document.getElementById('overlap-height-inspector').classList.remove('hidden');
-                    document.getElementById('overlap-height-selection-inspector').value = document.getElementById('default-height-detected').value;
-                    break;
-            }
-        }
-
-        this.displayWarning = function(sceneManager)
-        {
-            if(sceneManager.trackingMode === 'hand-tracking')
-            {
-                const infoTableElemInspector = document.getElementById('info-table-height-inspector');
-                if(!infoTableElemInspector)
-                {
-                    const newInfoTableElemInspector = document.createElement('p');
-                    newInfoTableElemInspector.id = 'info-table-height-inspector';
-                    newInfoTableElemInspector.innerHTML = `The table is <span data-unit=` + sceneManager.currentUnit.value + `>` + (Math.round(sceneManager.sceneElevation*sceneManager.currentUnit.value * 100) / 100.0) + `</span><span data-unittext=` + sceneManager.currentUnit.value + `>` + sceneManager.currentUnit.label + `</span> high`;
-                    newInfoTableElemInspector.style.color = 'orange';
-                    document.getElementById('tracking-section-inspector').appendChild(newInfoTableElemInspector);
-                }
-            }
-            else
-            {
-                const infoTableElemInspector = document.getElementById('info-table-height-inspector');
-                if(infoTableElemInspector) infoTableElemInspector.remove();
-            }
         }
 
         /* UPDATE */

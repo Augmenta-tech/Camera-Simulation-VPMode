@@ -19,7 +19,7 @@ class Node{
     static DEFAULT_NODE_ROTATION_X = - Math.PI / 2.0;
     static SIZE_TEXT_NODE = 0.4;
 
-    constructor(id, mode = document.getElementById("tracking-mode-inspector").value, cameraTypeID = Node.DEFAULT_CAMERA_TYPE_ID, p_x = 0, p_y = Node.DEFAULT_NODE_HEIGHT, p_z = 0, r_x = 0, r_y = 0, r_z = 0)
+    constructor(id, cameraTypeID = Node.DEFAULT_CAMERA_TYPE_ID, p_x = 0, p_y = Node.DEFAULT_NODE_HEIGHT, p_z = 0, r_x = 0, r_y = 0, r_z = 0)
     {
         this.id = id;
         this.cameraType = camerasTypes.find(t => t.id === cameraTypeID);
@@ -31,7 +31,7 @@ class Node{
         this.yRot = r_y;
         this.zRot = r_z;
 
-        this.cameraPerspective = buildCamera(this.cameraType, mode, this.xPos, this.yPos, this.zPos, this.xRot, this.yRot, this.zRot);
+        this.cameraPerspective = buildCamera(this.cameraType, this.xPos, this.yPos, this.zPos, this.xRot, this.yRot, this.zRot);
         this.cameraPerspectiveHelper = new CameraHelper( this.cameraPerspective );
     
         this.color = new Color(Math.random(), Math.random(), Math.random());
@@ -40,7 +40,6 @@ class Node{
         this.coveredPointsAbove = [];
 
         this.areaCoveredFloor = new Mesh();
-        this.areaCoveredAbove = new Mesh();
         this.areaCoveredWallX = new Mesh();
         this.areaCoveredWallZ = new Mesh();
 
@@ -51,19 +50,10 @@ class Node{
         this.areaValueText = buildTextMesh("AREA VALUE", Node.SIZE_TEXT_NODE * 2/3.0, this.xPos - Node.SIZE_TEXT_NODE * 4/3.0, this.yPos - (this.cameraType.rangeFar - 1), this.zPos + 3*Node.SIZE_TEXT_NODE/2.0);
 
     /* BUILDERS */
-        function buildCamera(camType, mode, pos_x, pos_y, pos_z, rot_x, rot_y, rot_z)
+        function buildCamera(camType, pos_x, pos_y, pos_z, rot_x, rot_y, rot_z)
         {
             let augmentaFar = 0;
-            switch(mode)
-            {
-                case 'hand-tracking':
-                    augmentaFar = camType.handFar;
-                    break;
-                case 'human-tracking':
-                default:
-                    augmentaFar = camType.rangeFar;
-                    break;
-            }
+            augmentaFar = camType.rangeFar;
             const camPersp = new PerspectiveCamera( camType.VFov, camType.aspectRatio, camType.rangeNear, augmentaFar );
 
             camPersp.position.set(pos_x, pos_y, pos_z);
@@ -160,22 +150,6 @@ class Node{
             this.areaValueText.visible = this.areaAppear;
         }
 
-        this.changeMode = function(mode)
-        {
-            switch(mode)
-            {
-                case 'hand-tracking':
-                    this.cameraPerspective.far = this.cameraType.handFar;
-                    break;
-                case 'human-tracking':
-                default:
-                    this.cameraPerspective.far = this.cameraType.rangeFar;
-                    break;
-            }
-
-            this.uiElement.changeFar();
-        }
-
         this.update = function()
         {
             this.cameraPerspective.updateProjectionMatrix();
@@ -213,8 +187,6 @@ class Node{
 
             this.areaCoveredFloor.geometry.dispose();
             this.areaCoveredFloor.material.dispose();
-            this.areaCoveredAbove.geometry.dispose();
-            this.areaCoveredAbove.material.dispose();
             this.areaCoveredWallX.geometry.dispose();
             this.areaCoveredWallX.material.dispose();
             this.areaCoveredWallZ.geometry.dispose();

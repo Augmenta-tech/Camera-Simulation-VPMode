@@ -38,8 +38,6 @@ class SceneManager{
     }
     static font;
     static DEFAULT_UNIT = units.meters;
-    static DEFAULT_TRACKING_MODE = 'human-tracking';
-    static DEFAULT_DETECTION_HEIGHT = parseFloat(document.getElementById('default-height-detected').value);
     static DEFAULT_WIDTH = 5;
     static DEFAULT_HEIGHT = 5;
 
@@ -52,9 +50,6 @@ class SceneManager{
 
         this.currentUnit = SceneManager.DEFAULT_UNIT;
 
-        this.trackingMode = SceneManager.DEFAULT_TRACKING_MODE;
-
-        this.heightDetected = SceneManager.DEFAULT_DETECTION_HEIGHT;
         this.sceneWidth = SceneManager.DEFAULT_WIDTH;
         this.sceneHeight = SceneManager.DEFAULT_HEIGHT;
         this.sceneElevation = 0;
@@ -236,28 +231,6 @@ class SceneManager{
             }
         }
 
-        this.changeTrackingMode = function(mode)
-        {
-            this.trackingMode = mode;
-
-            switch(mode)
-            {
-                case 'hand-tracking':
-                    this.heightDetected = SceneManager.HAND_TRACKING_OVERLAP_HEIGHT;
-                    this.sceneElevation = SceneManager.TABLE_ELEVATION;
-                    if(this.augmentaSceneLoaded) this.checkerboard.setSceneElevation(this.sceneElevation);
-                    break;
-                case 'human-tracking':
-                default:
-                    this.heightDetected = 1;
-                    this.sceneElevation = 0;
-                    if(this.augmentaSceneLoaded) this.checkerboard.setSceneElevation(this.sceneElevation);
-                    break;
-            }
-
-            this.objects.changeSensorsTrackingMode(mode);
-        }
-
 
         /* SCENE UPDATE */
 
@@ -283,19 +256,16 @@ class SceneManager{
              */
             
             this.scene.remove(node.areaCoveredFloor);
-            this.scene.remove(node.areaCoveredAbove);
             this.scene.remove(node.areaCoveredWallX);
             this.scene.remove(node.areaCoveredWallZ);
 
             const floorPlane = new Plane(floorNormal, -this.sceneElevation);
-            const abovePlane = new Plane(floorNormal, -(this.sceneElevation + this.heightDetected));
             const wallXPlane = new Plane(wallXNormal, -this.wallXDepth);
             const wallZPlane = new Plane(wallZNormal, -this.wallZDepth);
 
             if(node.areaAppear)
             {
                 const floorRays = [];
-                const aboveRays = [];
                 const wallXRays = [];
                 const wallZRays = [];
 
@@ -309,10 +279,6 @@ class SceneManager{
                     //crossing the floor
                     const rayIntersectFloor = getIntersectionOfPlanes(plane, floorPlane);
                     if(rayIntersectFloor !== -1) floorRays.push(rayIntersectFloor);
-
-                    //crossing a plane heightDetected m above the floor
-                    const rayIntersectAbove = getIntersectionOfPlanes(plane, abovePlane);
-                    if(rayIntersectAbove !== -1) aboveRays.push(rayIntersectAbove);
 
                     //crossing the left wall
                     const rayIntersectWallX = getIntersectionOfPlanes(plane, wallXPlane);
@@ -347,7 +313,6 @@ class SceneManager{
                 
                 //get intersection points
                 const intersectionPointsFloor = getIntersectionPoints(floorRays);
-                const intersectionPointsAbove = getIntersectionPoints(aboveRays);
                 const intersectionPointsWallX = getIntersectionPoints(wallXRays);
                 const intersectionPointsWallZ = getIntersectionPoints(wallZRays);
 
@@ -366,63 +331,25 @@ class SceneManager{
                 const coveredPointsWallX = intersectionPointsWallX.filter(p => frustumScaled.containsPoint(p) && p.x > this.wallXDepth - 0.01 && p.y > this.sceneElevation - 0.01 && p.z > this.wallZDepth - 0.01);
                 const coveredPointsWallZ = intersectionPointsWallZ.filter(p => frustumScaled.containsPoint(p) && p.x > this.wallXDepth - 0.01 && p.y > this.sceneElevation - 0.01 && p.z > this.wallZDepth - 0.01);
 
-
-                //filter points above, they must be in the frustum at heightDetected but also on the floor
-                let coveredPointsAbove = intersectionPointsAbove.filter(p => frustumScaled.containsPoint(p));
-                coveredPointsAbove.forEach((p) => p.y -= this.heightDetected);
-                if(coveredPointsFloor.length > 2 && coveredPointsAbove.length > 2)
-                {
-                    const raysAbove = [...aboveRays];
-                    raysAbove.forEach(r => r.origin.y -= this.heightDetected);
-                    const raysAroundArea = floorRays.concat(raysAbove);
-                    const pointsIntersect = getIntersectionPoints(raysAroundArea).filter(p => frustumScaled.containsPoint(p));
-                    const candidatesPoints = coveredPointsAbove.concat(pointsIntersect);
-
-                    //delete identical points
-                    candidatesPoints.sort((A,B) => B.length() - A.length() );
-                    sortByAngle(candidatesPoints, floorNormal);
-
-                    for(let j = 0; j < candidatesPoints.length - 1; j++)
-                    {
-                        if(candidatesPoints[j].distanceTo(candidatesPoints[j + 1]) < 0.01)
-                        {
-                            candidatesPoints.splice(j,1);
-                            j--;
-                        }
-                    }
-
-                    coveredPointsAbove = candidatesPoints.filter(p => {
-                        const abovePoint = p.clone();
-                        abovePoint.y += this.heightDetected;
-                        return frustumScaled.containsPoint(p) && frustumScaled.containsPoint(abovePoint) && p.x > this.wallXDepth - 0.01 && p.y > this.sceneElevation - 0.01 && p.z > this.wallZDepth - 0.01;
-                    })
-                }
-                else{
-                    coveredPointsAbove = [];
-                }
-
                 sortByAngle(coveredPointsFloor, floorNormal);
-                sortByAngle(coveredPointsAbove, floorNormal);
                 sortByAngle(coveredPointsWallX, wallXNormal);
                 sortByAngle(coveredPointsWallZ, wallZNormal);
 
-                node.coveredPointsAbove = coveredPointsAbove;
-
                 coveredPointsFloor.forEach((p) => p.y += 0.01*node.id / this.objects.getNbNodes());
-                coveredPointsAbove.forEach((p) => p.y += 0.01 + 0.01*node.id / this.objects.getNbNodes());
                 coveredPointsWallX.forEach((p) => p.x += 0.01*node.id / this.objects.getNbNodes());
                 coveredPointsWallZ.forEach((p) => p.z += 0.01*node.id / this.objects.getNbNodes());
 
+                node.coveredPointsAbove = coveredPointsFloor;
 
                 //display area value 
                 const previousValue = node.areaValue;
-                node.areaValue = calculateArea(coveredPointsAbove, this.currentUnit.value);
+                node.areaValue = calculateArea(coveredPointsFloor, this.currentUnit.value);
 
                 //Place text 
-                if(coveredPointsAbove.length > 2)
+                if(coveredPointsFloor.length > 2)
                 {
                     //cam.nameText.geometry = new TextGeometry( "Cam " + (cam.id+1), { font: font, size: cam.areaValue / 40.0, height: 0.01 } );
-                    const barycentre = getBarycentre(coveredPointsAbove);
+                    const barycentre = getBarycentre(coveredPointsFloor);
                     node.changeTextPosition(barycentre, this.currentUnit.value);
                     if(previousValue != node.areaValue) node.updateAreaText(this.currentUnit);
                 }
@@ -439,20 +366,16 @@ class SceneManager{
 
                 node.areaCoveredFloor.geometry.dispose();
                 node.areaCoveredFloor.material.dispose();
-                node.areaCoveredAbove.geometry.dispose();
-                node.areaCoveredAbove.material.dispose();
                 node.areaCoveredWallX.geometry.dispose();
                 node.areaCoveredWallX.material.dispose();
                 node.areaCoveredWallZ.geometry.dispose();
                 node.areaCoveredWallZ.material.dispose();
 
-                node.areaCoveredFloor = drawAreaWithPoints(coveredPointsFloor, 0xff0f00);
-                node.areaCoveredAbove = drawAreaWithPoints(coveredPointsAbove);
+                node.areaCoveredFloor = drawAreaWithPoints(coveredPointsFloor);
                 node.areaCoveredWallX = drawAreaWithPoints(coveredPointsWallX);
                 node.areaCoveredWallZ = drawAreaWithPoints(coveredPointsWallZ);
 
                 this.scene.add(node.areaCoveredFloor);
-                this.scene.add(node.areaCoveredAbove);
                 this.scene.add(node.areaCoveredWallX);
                 this.scene.add(node.areaCoveredWallZ);
             }
@@ -643,9 +566,6 @@ class SceneManager{
         // DEBUG
         this.debug = function()
         {
-            console.log(document.getElementById("overlap-height-selection-inspector").value)
-            console.log(this.heightDetected);
-            this.objects.debug();
         }
     }
 }

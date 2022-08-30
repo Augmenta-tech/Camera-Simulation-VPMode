@@ -7,7 +7,7 @@ class Wizard{
     {
         addCamTypesToForm();
 
-        this.bindEventListeners = function(viewportManager, uiManager)
+        this.bindEventListeners = function(viewportManager)
         {
             const sceneManager = viewportManager.sceneManager;
             const formModal = document.getElementById('wizard-modal');
@@ -24,19 +24,16 @@ class Wizard{
                 if(event.target === formModal) formModal.classList.add('hidden');
             });
 
-            document.getElementById('tracking-mode-selection-wizard').addEventListener('change', () => changeTrackingMode(sceneManager, document.getElementById('tracking-mode-selection-wizard').value));
-
             const camCheckboxes = document.getElementsByClassName('checkbox-camera-type');
             for(let i = 0; i < camCheckboxes.length; i++)
             {
                 camCheckboxes[i].addEventListener('change', () => checkFormCoherence(sceneManager));
             }
-            document.getElementById('tracking-mode-selection-wizard').addEventListener('change', () => checkFormCoherence(sceneManager));
             document.getElementById('input-hook-height-wizard').addEventListener('change', () => checkFormCoherence(sceneManager));
 
             function checkFormCoherence(sceneManager)
             {
-                const maxFar = getMaxFarFromCheckedCam(document.getElementById('tracking-mode-selection-wizard').value)
+                const maxFar = getMaxFarFromCheckedCam()
                 if(document.getElementById('input-hook-height-wizard').value / sceneManager.currentUnit.value > maxFar)
                 {
                     document.getElementById('input-hook-height-wizard').style.color = "red";
@@ -61,41 +58,7 @@ class Wizard{
             document.getElementById('generate-scene-wizard-button').addEventListener('click', () => {
                 createSceneFromWizard(sceneManager);
                 viewportManager.placeCamera();
-                uiManager.displayWarning(sceneManager);
             });
-        }
-
-        function changeTrackingMode(sceneManager, mode)
-        {
-            switch(mode)
-            {
-                case 'hand-tracking':
-                    document.getElementById('overlap-height-wizard').classList.add('hidden');
-                    break;
-                case 'human-tracking':
-                default:
-                    document.getElementById('overlap-height-wizard').classList.remove('hidden');
-                    document.getElementById('overlap-height-selection-wizard').value = document.getElementById('default-height-detected').value;
-                    break;
-            }
-
-            if(mode === 'hand-tracking')
-            {
-                const infoTableElem = document.getElementById('info-table-height');
-                if(!infoTableElem)
-                {
-                    const newInfoTableElem = document.createElement("p");
-                    newInfoTableElem.id = 'info-table-height';
-                    newInfoTableElem.innerHTML = `The table is <span data-unit=` + sceneManager.currentUnit.value + `>` + (Math.round(SceneManager.TABLE_ELEVATION*sceneManager.currentUnit.value * 100) / 100) + `</span><span data-unittext=` + sceneManager.currentUnit.value + `>` + sceneManager.currentUnit.label + `</span> high`;
-                    newInfoTableElem.style.color = "orange";
-                    document.getElementById('tracking-section-wizard').appendChild(newInfoTableElem);
-                }
-            }
-            else
-            {
-                const infoTableElem = document.getElementById('info-table-height');
-                if(infoTableElem) infoTableElem.remove();
-            }
         }
 
         function initWizardValues(sceneManager)
@@ -103,12 +66,6 @@ class Wizard{
             document.getElementById('input-scene-width-wizard').value = Math.round(sceneManager.sceneWidth * sceneManager.currentUnit.value * 100) / 100.0;
             document.getElementById('input-scene-height-wizard').value = Math.round(sceneManager.sceneHeight * sceneManager.currentUnit.value * 100) / 100.0;
             document.getElementById('input-hook-height-wizard').value = parseFloat(document.getElementById('input-hook-height-wizard').value) > 0 ? document.getElementById('input-hook-height-wizard').value : Math.round(4.5 * sceneManager.currentUnit.value * 100) / 100.0;
-
-            document.getElementById('tracking-mode-selection-wizard').value = sceneManager.trackingMode;
-
-            changeTrackingMode(sceneManager, sceneManager.trackingMode);
-            if(sceneManager.trackingMode === 'human-tracking') document.getElementById('overlap-height-selection-wizard').value = sceneManager.heightDetected;
-
         }
 
         function addCamTypesToForm(){
@@ -143,7 +100,7 @@ class Wizard{
             });
         }
 
-        function getMaxFarFromCheckedCam(mode)
+        function getMaxFarFromCheckedCam()
         {
             const camCheckboxes = document.getElementsByClassName('checkbox-camera-type');
             const camElementsChecked = [];
@@ -161,16 +118,8 @@ class Wizard{
                 });
                 const camerasChecked = camerasTypes.filter(c => camTypesChecked.includes(c.id));
     
-                switch(mode)
-                {
-                    case 'hand-tracking':
-                        camerasChecked.sort((A,B) => B.handFar - A.handFar)
-                        return camerasChecked[0].handFar;
-                    case 'human-tracking':
-                    default:
-                        camerasChecked.sort((A,B) => B.rangeFar - A.rangeFar)
-                        return camerasChecked[0].rangeFar;
-                }
+                camerasChecked.sort((A,B) => B.rangeFar - A.rangeFar)
+                return camerasChecked[0].rangeFar;
             }
         }
 
@@ -180,19 +129,12 @@ class Wizard{
             const inputHeight = parseFloat(document.getElementById('input-scene-height-wizard').value);
             const camsHeight = Math.round(parseFloat(document.getElementById('input-hook-height-wizard').value) / sceneManager.currentUnit.value * 100) / 100;
             
-            const trackingMode = document.getElementById('tracking-mode-selection-wizard').value;
-            let sceneElevation, overlapHeightDetection;
-            switch(trackingMode)
+            const percentOverlapped = parseFloat(document.getElementById('input-percent-overlap-wizard').value) / 100.0;
+
+            if(Math.abs(1 - percentOverlapped) < 0.01)
             {
-                case 'hand-tracking':
-                    sceneElevation = SceneManager.TABLE_ELEVATION;
-                    overlapHeightDetection = SceneManager.HAND_TRACKING_OVERLAP_HEIGHT;
-                    break;
-                case 'human-tracking':
-                default:
-                    sceneElevation = sceneManager.sceneElevation;
-                    overlapHeightDetection = parseFloat(document.getElementById('overlap-height-selection-wizard').value);
-                    break;
+                alert("Invalid overlap parameter");
+                return;
             }
 
             if(!inputWidth || !inputHeight)
@@ -212,30 +154,19 @@ class Wizard{
             let configs = [];
 
             camerasTypes.filter(c => c.recommended).forEach(type => {
-                let augmentaFar = 0;
-                switch(trackingMode)
+                if(document.getElementById('check-' + type.id).checked && camsHeight <= type.rangeFar && camsHeight >= type.rangeNear)
                 {
-                    case 'hand-tracking':
-                        augmentaFar = type.handFar;
-                        break;
-                    case 'human-tracking':
-                    default:
-                        augmentaFar = type.rangeFar;
-                        break;
-                }
-                if(document.getElementById('check-' + type.id).checked && camsHeight <= augmentaFar && camsHeight >= type.rangeNear + overlapHeightDetection)
-                {
-                    const widthAreaCovered = Math.abs(Math.tan((type.HFov/2.0) * Math.PI / 180.0))*(camsHeight - overlapHeightDetection) * 2;
-                    const heightAreaCovered = Math.abs(Math.tan((type.VFov/2.0) * Math.PI / 180.0))*(camsHeight - overlapHeightDetection) * 2;
+                    const widthAreaCovered = Math.abs(Math.tan((type.HFov/2.0) * Math.PI / 180.0))*(camsHeight) * 2 * (1 - percentOverlapped);
+                    const heightAreaCovered = Math.abs(Math.tan((type.VFov/2.0) * Math.PI / 180.0))*(camsHeight) * 2 * (1 - percentOverlapped);
 
-                    const nbCamsNoRot = Math.ceil(givenWidth / widthAreaCovered) * Math.ceil(givenHeight / heightAreaCovered);
-                    const nbCamsRot = Math.ceil(givenWidth / heightAreaCovered) * Math.ceil(givenHeight / widthAreaCovered);
+                    const nbCamsNoRot = Math.ceil(givenWidth / widthAreaCovered - percentOverlapped) * Math.ceil(givenHeight / heightAreaCovered - percentOverlapped);
+                    const nbCamsRot = Math.ceil(givenWidth / heightAreaCovered - percentOverlapped) * Math.ceil(givenHeight / widthAreaCovered - percentOverlapped);
 
                     nbCamsRot < nbCamsNoRot
                         ?
-                        configs.push({ typeID: type.id, w: heightAreaCovered, h:widthAreaCovered, nbW: Math.ceil(givenWidth / heightAreaCovered), nbH: Math.ceil(givenHeight / widthAreaCovered), rot: true })
+                        configs.push({ typeID: type.id, w: heightAreaCovered / (1 - percentOverlapped), h:widthAreaCovered / (1 - percentOverlapped), nbW: Math.ceil(givenWidth / heightAreaCovered - percentOverlapped), nbH: Math.ceil(givenHeight / widthAreaCovered - percentOverlapped), rot: true })
                         :
-                        configs.push({ typeID: type.id, w: widthAreaCovered, h:heightAreaCovered, nbW: Math.ceil(givenWidth / widthAreaCovered), nbH: Math.ceil(givenHeight / heightAreaCovered), rot: false });
+                        configs.push({ typeID: type.id, w: widthAreaCovered / (1 - percentOverlapped), h:heightAreaCovered / (1 - percentOverlapped), nbW: Math.ceil(givenWidth / widthAreaCovered - percentOverlapped), nbH: Math.ceil(givenHeight / heightAreaCovered - percentOverlapped), rot: false });
                 }
             });
 
@@ -267,9 +198,9 @@ class Wizard{
                     {
                         chosenConfig.rot 
                             ?
-                            sceneManager.objects.addNode(true, trackingMode, chosenConfig.typeID, offsetX + i*(chosenConfig.w - oX), camsHeight + sceneElevation, offsetY + j*(chosenConfig.h - oY), 0, 0, Math.PI/2.0)
+                            sceneManager.objects.addNode(true, chosenConfig.typeID, offsetX + i*(chosenConfig.w - oX), camsHeight, offsetY + j*(chosenConfig.h - oY), 0, 0, Math.PI/2.0)
                             :
-                            sceneManager.objects.addNode(true, trackingMode, chosenConfig.typeID, offsetX + i*(chosenConfig.w - oX), camsHeight + sceneElevation, offsetY + j*(chosenConfig.h - oY));
+                            sceneManager.objects.addNode(true, chosenConfig.typeID, offsetX + i*(chosenConfig.w - oX), camsHeight, offsetY + j*(chosenConfig.h - oY));
 
                     }
                 }
@@ -277,23 +208,6 @@ class Wizard{
                 // update inspector infos
                 document.getElementById('input-scene-width-inspector').value = inputWidth;
                 document.getElementById('input-scene-height-inspector').value = inputHeight;
-    
-                document.getElementById('tracking-mode-selection-inspector').value = trackingMode;
-                switch(trackingMode)
-                {
-                    case 'hand-tracking':
-                        document.getElementById('overlap-height-inspector').classList.add('hidden');
-                        break;
-                    case 'human-tracking':
-                    default:
-                        document.getElementById('overlap-height-inspector').classList.remove('hidden');
-                        document.getElementById('overlap-height-selection-inspector').value = document.getElementById('overlap-height-selection-wizard').value
-                        break;
-                }
-    
-                //set scene attributes
-                sceneManager.changeTrackingMode(trackingMode);
-                if(trackingMode === 'human-tracking') sceneManager.heightDetected = overlapHeightDetection;
     
                 //placeCamera(new THREE.Vector3(givenWidth, 6, givenHeight));
                 document.getElementById('wizard-modal').classList.add('hidden');

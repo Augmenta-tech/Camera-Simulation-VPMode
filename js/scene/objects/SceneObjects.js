@@ -51,7 +51,7 @@ class SceneObjects{
             
             if(index === -1)
             {
-                sceneObjects.addNode(false, sceneManager.trackingMode, Node.DEFAULT_CAMERA_TYPE_ID, 2.5, Node.DEFAULT_NODE_HEIGHT, 2.5);
+                sceneObjects.addNode(false, Node.DEFAULT_CAMERA_TYPE_ID, 2.5, Node.DEFAULT_NODE_HEIGHT, 2.5);
                 sceneManager.updateAugmentaSceneBorder(SceneManager.DEFAULT_WIDTH, SceneManager.DEFAULT_HEIGHT);
             }
             else
@@ -60,7 +60,7 @@ class SceneObjects{
                 const cams = url.split('&');
                 const sceneInfo = cams.shift();
                 const infos = sceneInfo.split(',');
-                let mode, sceneWidth, sceneHeight;;
+                let sceneWidth, sceneHeight;;
                 infos.forEach(info => {
                     const keyVal = info.split('=');
                     const key = keyVal[0];
@@ -74,10 +74,6 @@ class SceneObjects{
                         case "l":
                             document.getElementById("input-scene-height-inspector").value = parseFloat(val);
                             sceneHeight = val;
-                            break;
-                        case "m":
-                            document.getElementById("tracking-mode-selection-inspector").value = val;
-                            document.getElementById("tracking-mode-selection-inspector").dispatchEvent(new Event('change'));
                             break;
                         case "h":
                             sceneManager.heightDetected = parseFloat(val);
@@ -131,7 +127,7 @@ class SceneObjects{
                             }
                         }
                     });
-                    sceneObjects.addNode(true, sceneManager.trackingMode, typeID, x, y, z, p, a, r)
+                    sceneObjects.addNode(true, typeID, x, y, z, p, a, r)
                 })
             }
         }
@@ -191,7 +187,6 @@ class SceneObjects{
          * Add a node to the scene
          * 
          * @param {boolean} autoConstruct Is this node added automatically or manually. Default is false (manually).
-         * @param {string} mode 'human-tracking', 'hand-tracking', ...
          * @param {int} typeID Camera Type ID. See cameras.js. Default is defined in Node.js.
          * @param {float} x x position at creation. Default is 0.
          * @param {float} y y position at creation. Default is defined in Node.js.
@@ -200,14 +195,14 @@ class SceneObjects{
          * @param {float} a yaw rotation at creation. Default is 0.
          * @param {float} r roll rotation at creation. Default is 0.
          */
-        this.addNode = function(autoConstruct = false, mode = sceneManager.trackingMode, typeID = Node.DEFAULT_CAMERA_TYPE_ID, x = 0, y = Node.DEFAULT_NODE_HEIGHT, z = 0, p = 0, a = 0, r = 0)
+        this.addNode = function(autoConstruct = false, typeID = Node.DEFAULT_CAMERA_TYPE_ID, x = 0, y = Node.DEFAULT_NODE_HEIGHT, z = 0, p = 0, a = 0, r = 0)
         {
             if(!SceneObjects.font)
             {
                 //TODO: Add UI to inform that button will work in few seconds
                 return;
             }
-            const newCamera = new Node(nodes.length, mode, typeID, x, y, z, p, a, r)
+            const newCamera = new Node(nodes.length, typeID, x, y, z, p, a, r)
             newCamera.uiElement = new NodeUI(newCamera, sceneManager);
             
             //Offset
@@ -286,8 +281,6 @@ class SceneObjects{
             url += Math.floor(sceneManager.sceneWidth * 100)/100;
             url += ",l=";
             url += Math.floor(sceneManager.sceneHeight * 100)/100;
-            url += ",m=";
-            url += sceneManager.trackingMode;
             url += ",h=";
             url += sceneManager.heightDetected;
             url += '&';
@@ -313,11 +306,6 @@ class SceneObjects{
             url = url.slice(0, -1);
         
             return url;
-        }
-
-        this.changeSensorsTrackingMode = function(mode)
-        {
-            nodes.forEach(n => n.changeMode(mode))
         }
 
 
