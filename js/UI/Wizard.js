@@ -132,7 +132,7 @@ class Wizard{
             
             const percentOverlapped = parseFloat(document.getElementById('input-percent-overlap-wizard').value) / 100.0;
 
-            if(Math.abs(1 - percentOverlapped) < 0.01)
+            if(percentOverlapped > 0.99 || percentOverlapped < 0)
             {
                 alert("Invalid overlap parameter");
                 return;
@@ -157,17 +157,22 @@ class Wizard{
             camerasTypes.filter(c => c.recommended).forEach(type => {
                 if(document.getElementById('check-' + type.id).checked && camsHeight <= type.rangeFar && camsHeight >= type.rangeNear)
                 {
-                    const widthAreaCovered = Math.abs(Math.tan((type.HFov/2.0) * Math.PI / 180.0))*(camsHeight) * 2 * (1 - percentOverlapped);
-                    const heightAreaCovered = Math.abs(Math.tan((type.VFov/2.0) * Math.PI / 180.0))*(camsHeight) * 2 * (1 - percentOverlapped);
+                    const totalWidthCovered = Math.abs(Math.tan((type.HFov/2.0) * Math.PI / 180.0))*(camsHeight) * 2;
+                    const totalHeightCovered = Math.abs(Math.tan((type.VFov/2.0) * Math.PI / 180.0))*(camsHeight) * 2;
 
-                    const nbCamsNoRot = Math.ceil(givenWidth / widthAreaCovered - percentOverlapped) * Math.ceil(givenHeight / heightAreaCovered - percentOverlapped);
-                    const nbCamsRot = Math.ceil(givenWidth / heightAreaCovered - percentOverlapped) * Math.ceil(givenHeight / widthAreaCovered - percentOverlapped);
+                    const widthAreaCovered = totalWidthCovered * (1 - percentOverlapped);
+                    const heightAreaCovered = totalHeightCovered * (1 - percentOverlapped);
 
-                    nbCamsRot < nbCamsNoRot
+                    const nbcamsNoRotWidth = Math.ceil(givenWidth / widthAreaCovered - (percentOverlapped / (1 - percentOverlapped)));
+                    const nbCamsNoRotHeight = Math.ceil(givenHeight / heightAreaCovered - (percentOverlapped / (1 - percentOverlapped)));
+                    const nbCamsRotWidth = Math.ceil(givenWidth / heightAreaCovered - (percentOverlapped / (1 - percentOverlapped)));
+                    const nbCamsRotHeight = Math.ceil(givenHeight / widthAreaCovered - (percentOverlapped / (1 - percentOverlapped)));
+
+                    nbCamsRotWidth * nbCamsRotHeight < nbcamsNoRotWidth * nbCamsNoRotHeight
                         ?
-                        configs.push({ typeID: type.id, w: heightAreaCovered / (1 - percentOverlapped), h:widthAreaCovered / (1 - percentOverlapped), nbW: Math.ceil(givenWidth / heightAreaCovered - percentOverlapped), nbH: Math.ceil(givenHeight / widthAreaCovered - percentOverlapped), rot: true })
+                        configs.push({ typeID: type.id, w: totalHeightCovered, h: totalWidthCovered, nbW: nbCamsRotWidth, nbH: nbCamsRotHeight, rot: true })
                         :
-                        configs.push({ typeID: type.id, w: widthAreaCovered / (1 - percentOverlapped), h:heightAreaCovered / (1 - percentOverlapped), nbW: Math.ceil(givenWidth / widthAreaCovered - percentOverlapped), nbH: Math.ceil(givenHeight / heightAreaCovered - percentOverlapped), rot: false });
+                        configs.push({ typeID: type.id, w: totalWidthCovered, h: totalHeightCovered, nbW: nbcamsNoRotWidth, nbH: nbCamsNoRotHeight, rot: false });
                 }
             });
 
