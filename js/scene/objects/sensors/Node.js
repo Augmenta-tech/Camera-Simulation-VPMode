@@ -21,40 +21,13 @@ class Node{
 
     constructor(id, cameraTypeID = Node.DEFAULT_CAMERA_TYPE_ID, p_x = 0, p_y = Node.DEFAULT_NODE_HEIGHT, p_z = 0, r_x = 0, r_y = 0, r_z = 0)
     {
-        this.id = id;
-        this.cameraType = camerasTypes.find(t => t.id === cameraTypeID);
-
-        this.xPos = p_x;
-        this.yPos = p_y;
-        this.zPos = p_z;
-        this.xRot = r_x;
-        this.yRot = r_y;
-        this.zRot = r_z;
-
-        this.cameraPerspective = buildCamera(this.cameraType, this.xPos, this.yPos, this.zPos, this.xRot, this.yRot, this.zRot);
-        this.cameraPerspectiveHelper = new CameraHelper( this.cameraPerspective );
-    
-        this.color = new Color(Math.random(), Math.random(), Math.random());
-        this.mesh = buildMesh(this.color, this.xPos, this.yPos, this.zPos);
-
-        this.coveredPointsAbove = [];
-
-        this.areaCoveredFloor = new Mesh();
-        this.areaCoveredWallX = new Mesh();
-        this.areaCoveredWallZ = new Mesh();
-
-        this.areaAppear = true;
-        this.areaValue = 0;
-
-        this.nameText = buildTextMesh("Node " + (this.id+1), Node.SIZE_TEXT_NODE, this.xPos - Node.SIZE_TEXT_NODE * 2, this.yPos - (this.cameraType.rangeFar - 1), this.zPos + Node.SIZE_TEXT_NODE/2.0)
-        this.areaValueText = buildTextMesh("AREA VALUE", Node.SIZE_TEXT_NODE * 2/3.0, this.xPos - Node.SIZE_TEXT_NODE * 4/3.0, this.yPos - (this.cameraType.rangeFar - 1), this.zPos + 3*Node.SIZE_TEXT_NODE/2.0);
 
     /* BUILDERS */
         function buildCamera(camType, pos_x, pos_y, pos_z, rot_x, rot_y, rot_z)
         {
             let augmentaFar = 0;
             augmentaFar = camType.rangeFar;
-            const camPersp = new PerspectiveCamera( camType.VFov, camType.aspectRatio, camType.rangeNear, augmentaFar );
+            const camPersp = new PerspectiveCamera( 45, 1.6, camType.rangeNear, augmentaFar );
 
             camPersp.position.set(pos_x, pos_y, pos_z);
             camPersp.rotation.set(rot_x + Node.DEFAULT_NODE_ROTATION_X, - rot_y, rot_z);
@@ -122,6 +95,14 @@ class Node{
             this.uiElement.changeVisibility(value);
         }
 
+        this.changeRatios = function()
+        {
+            const aspectRatio = parseFloat(document.getElementById('aspect-ratio-selection-inspector').value);
+            const opticRatio = parseFloat(document.getElementById('input-optic-ratio-inspector').value);
+            this.cameraPerspective.aspect = aspectRatio;
+            this.cameraPerspective.fov = Math.round(2 * Math.atan(1 / (2 * opticRatio * aspectRatio)) * 180 / Math.PI * 100) / 100.0;
+        }   
+
         this.updatePosition = function(currentUnitValue)
         {
             this.xPos = this.mesh.position.x;
@@ -131,6 +112,7 @@ class Node{
 
             this.uiElement.updatePosition(this.xPos, this.yPos, this.zPos, currentUnitValue)
         }
+ 
 
         this.updateAreaText = function(currentUnit)
         {
@@ -199,6 +181,36 @@ class Node{
 
             this.uiElement.dispose();
         }
+
+        this.id = id;
+        this.cameraType = camerasTypes.find(t => t.id === cameraTypeID);
+
+        this.xPos = p_x;
+        this.yPos = p_y;
+        this.zPos = p_z;
+        this.xRot = r_x;
+        this.yRot = r_y;
+        this.zRot = r_z;
+
+        this.cameraPerspective = buildCamera(this.cameraType, this.xPos, this.yPos, this.zPos, this.xRot, this.yRot, this.zRot);
+        this.changeRatios();
+        this.cameraPerspectiveHelper = new CameraHelper( this.cameraPerspective );
+    
+        this.color = new Color(Math.random(), Math.random(), Math.random());
+        this.mesh = buildMesh(this.color, this.xPos, this.yPos, this.zPos);
+
+        this.coveredPointsAbove = [];
+
+        this.areaCoveredFloor = new Mesh();
+        this.areaCoveredWallX = new Mesh();
+        this.areaCoveredWallZ = new Mesh();
+
+        this.areaAppear = true;
+        this.areaValue = 0;
+
+        this.nameText = buildTextMesh("Node " + (this.id+1), Node.SIZE_TEXT_NODE, this.xPos - Node.SIZE_TEXT_NODE * 2, this.yPos - (this.cameraType.rangeFar - 1), this.zPos + Node.SIZE_TEXT_NODE/2.0)
+        this.areaValueText = buildTextMesh("AREA VALUE", Node.SIZE_TEXT_NODE * 2/3.0, this.xPos - Node.SIZE_TEXT_NODE * 4/3.0, this.yPos - (this.cameraType.rangeFar - 1), this.zPos + 3*Node.SIZE_TEXT_NODE/2.0);
+
     }
 }
 

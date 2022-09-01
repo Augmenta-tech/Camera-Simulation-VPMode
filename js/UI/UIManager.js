@@ -22,6 +22,9 @@ class UIManager{
             document.getElementById("input-scene-width-inspector").addEventListener('change', () => sceneManager.updateAugmentaSceneBorder(parseFloat(document.getElementById("input-scene-width-inspector").value), parseFloat(document.getElementById("input-scene-height-inspector").value)));
             document.getElementById("input-scene-height-inspector").addEventListener('change', () => sceneManager.updateAugmentaSceneBorder(parseFloat(document.getElementById("input-scene-width-inspector").value), parseFloat(document.getElementById("input-scene-height-inspector").value)));
 
+            document.getElementById("aspect-ratio-selection-inspector").addEventListener('change', () => sceneManager.objects.changeRatios());
+            document.getElementById("input-optic-ratio-inspector").addEventListener('change', () => sceneManager.objects.changeRatios());
+
             this.wizard.bindEventListeners(viewportManager);
         }
 
@@ -33,6 +36,8 @@ class UIManager{
                 inputs[i].dataset.unit = SceneManager.DEFAULT_UNIT.value;
                 if(inputs[i].id != 'input-hook-height-wizard' && inputs[i].id != 'input-percent-overlap-wizard') inputs[i].value = 5*SceneManager.DEFAULT_UNIT.value;
                 else inputs[i].value = '';
+
+                document.getElementById('input-optic-ratio-inspector').value = 1.1;
             }
         }
 

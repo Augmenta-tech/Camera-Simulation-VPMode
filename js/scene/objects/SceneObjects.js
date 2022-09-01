@@ -265,6 +265,12 @@ class SceneObjects{
             dummies.forEach(d => d.updatePosition());
         }
 
+        this.changeRatios = function()
+        {
+            nodes.forEach(n => n.changeRatios());
+            console.log("here");
+        }
+
         /**
          * Create an url containing all the informations of the scene
          * 

@@ -170,6 +170,23 @@
                     </div>
                   </div>
 
+                  <!-- RATIO INPUTS -->
+                  <div>
+                    <div id="aspect-ratio-select-wizard">
+                      <p>Aspect Ratio</p>
+                      <select title="aspect-ratio-wizard" name="aspect-ratio-wizard" id="aspect-ratio-selection-wizard">
+                        <option value="1.6" selected>16/10</option>
+                        <option value="1.778">16/9</option>
+                        <option value="1.333">4/3</option>
+                      </select>
+                    </div>
+        
+                    <div>
+                      <p>Optic Ratio</p>
+                      <input id="input-optic-ratio-wizard" type="number" placeholder="Optic Ratio" min="0" max="3" step = "0.05">
+                    </div>
+                  </div>
+
                   <!-- CAMERA TYPES SECTION IN WIZARD -->
                   <div>
                     <div id="cam-types-checkboxes-wizard">
@@ -209,6 +226,22 @@
             <!-- SCENE COVERED FEEDBACK -->
             <div class="row">
               <p>Scene fully covered: </p><span id="scene-fully-covered-icon" class="iconify-inline" data-icon="ion:checkmark-circle-sharp"></span>
+            </div>
+
+
+            <!-- RATIO INPUTS -->
+            <div id="aspect-ratio-select">
+              <p>Aspect Ratio</p>
+              <select title="aspect-ratio-inspector" name="aspect-ratio-inspector" id="aspect-ratio-selection-inspector">
+                <option value="1.6" selected>16/10</option>
+                <option value="1.778">16/9</option>
+                <option value="1.333">4/3</option>
+              </select>
+            </div>
+
+            <div>
+              <p>Optic Ratio</p>
+              <input id="input-optic-ratio-inspector" type="number" placeholder="Optic Ratio" min="0" max="3" step = "0.05">
             </div>
           </div>
 

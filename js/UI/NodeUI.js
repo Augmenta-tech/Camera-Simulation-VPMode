@@ -11,13 +11,6 @@ class NodeUI{
 
         function buildUIDiv()
         {
-            let cameraTypesOptions = ``;
-            camerasTypes.filter(c => c.recommended).forEach(type => {
-                const optionElement = `<option value="` + type.name + `" ` + (node.cameraType.name === type.name ? `selected` : ``) + `>` + type.name;
-                cameraTypesOptions += optionElement;
-                cameraTypesOptions += "</option>"
-            });
-        
             const nodeUIdiv = document.createElement('div');
             nodeUIdiv.classList.add("nodeUI");
             
@@ -36,11 +29,6 @@ class NodeUI{
                     </div>
                 </div>
                 <div id="node-infos-` + (node.id) + `-UI" class="column sections-container space-y">
-                    <div id="select-camera" class="row center-y">
-                        <select title="camType-` + (node.id) + `" name="camType-` + (node.id) + `" id="cam-type-` + (node.id) + `">
-                        ` + cameraTypesOptions + `
-                        </select>
-                    </div>
                     <div class="row node-transformations">
                         <p class="main-text">Position</p>
                         <div>
@@ -65,16 +53,6 @@ class NodeUI{
                             <p id="z-rot-`+ node.id +`" class="draggable">Z <strong>` + Math.round(node.zRot*180/Math.PI) + `</strong>° </p>
                         </div>
                     </div>
-                    <div class="row cam-spec">
-                        <p class="spec-title main-text">FOV</p>
-                        <p>H</p><p id="hfov` + node.id + `">` + node.cameraType.HFov + `°</p>
-                        <p>V</p><p id="vfov` + node.id + `">` + node.cameraType.VFov + `°</p>
-                    </div>
-                    <div class="row cam-spec">
-                        <p class="spec-title main-text">Distance</p>
-                        <p>Near</p><p><span id="near` + node.id + `" data-unit=` + sceneManager.currentUnit.value + `>` + (Math.round(node.cameraPerspective.near*sceneManager.currentUnit.value * 100) / 100.0) + `</span> <span data-unittext=` + sceneManager.currentUnit.value + `>` + sceneManager.currentUnit.label + `</span></p>
-                        <p>Far</p><p><span id="far` + node.id + `" data-unit=` + sceneManager.currentUnit.value + `>` + (Math.round(node.cameraPerspective.far*sceneManager.currentUnit.value * 100) / 100.0) + `</span> <span data-unittext=` + sceneManager.currentUnit.value + `>` + sceneManager.currentUnit.label + `</span></p>
-                    </div>
                 </div>`;
 
             /*
@@ -98,8 +76,6 @@ class NodeUI{
     
             document.getElementById('node-' + (node.id) + '-hide-UI').addEventListener('click', () => hideUICam());
             document.getElementById('node-' + (node.id) + '-visible').addEventListener('click', () => changeVisibilityofCam());
-        
-            document.getElementById('cam-type-' + node.id).addEventListener('change', () => changeCameraType());
         }
 
         function makeElementDraggable(element) {
@@ -254,29 +230,6 @@ class NodeUI{
         {
             node.changeVisibility();
             sceneManager.objects.updateFrustumIcon();
-        }
-
-        function changeCameraType()
-        {
-            node.cameraType = camerasTypes.find(type => type.name === document.getElementById('cam-type-' + node.id).value);
-
-            node.cameraPerspective.fov = node.cameraType.VFov;
-            node.cameraPerspective.aspect = node.cameraType.aspectRatio;
-            node.cameraPerspective.near = node.cameraType.rangeNear;
-            switch(sceneManager.trackingMode)
-            {
-                case 'hand-tracking':
-                    node.cameraPerspective.far = node.cameraType.handFar;
-                    break;
-                case 'human-tracking':
-                default:
-                    node.cameraPerspective.far = node.cameraType.rangeFar;
-                    break;
-            }
-            document.getElementById('hfov' + node.id).innerHTML = node.cameraType.HFov + '°';
-            document.getElementById('vfov' + node.id).innerHTML = node.cameraType.VFov + '°';
-            document.getElementById('near' + node.id).innerHTML = (Math.round(node.cameraPerspective.near*document.getElementById('near' + node.id).dataset.unit * 100) / 100.0);
-            document.getElementById('far' + node.id).innerHTML = (Math.round(node.cameraPerspective.far*document.getElementById('far' + node.id).dataset.unit * 100) / 100.0);
         }
 
         this.changeFar = function()

@@ -5,7 +5,7 @@ import { SceneManager } from '../scene/SceneManager.js'
 class Wizard{
     constructor()
     {
-        addCamTypesToForm();
+        //addCamTypesToForm();
 
         this.bindEventListeners = function(viewportManager)
         {
@@ -67,6 +67,9 @@ class Wizard{
             document.getElementById('input-scene-height-wizard').value = Math.round(sceneManager.sceneHeight * sceneManager.currentUnit.value * 100) / 100.0;
             document.getElementById('input-hook-height-wizard').value = parseFloat(document.getElementById('input-hook-height-wizard').value) > 0 ? document.getElementById('input-hook-height-wizard').value : Math.round(4.5 * sceneManager.currentUnit.value * 100) / 100.0;
             document.getElementById('input-percent-overlap-wizard'). value = parseFloat(document.getElementById('input-percent-overlap-wizard').value) > 0 ? document.getElementById('input-percent-overlap-wizard').value : 15;
+            
+            document.getElementById("aspect-ratio-selection-wizard").value = parseFloat(document.getElementById("aspect-ratio-selection-inspector").value);
+            document.getElementById("input-optic-ratio-wizard").value = parseFloat(document.getElementById("input-optic-ratio-inspector").value);
         }
 
         function addCamTypesToForm(){
@@ -103,7 +106,7 @@ class Wizard{
 
         function getMaxFarFromCheckedCam()
         {
-            const camCheckboxes = document.getElementsByClassName('checkbox-camera-type');
+            /*const camCheckboxes = document.getElementsByClassName('checkbox-camera-type');
             const camElementsChecked = [];
             for(let i = 0; i < camCheckboxes.length; i++)
             {
@@ -121,7 +124,7 @@ class Wizard{
     
                 camerasChecked.sort((A,B) => B.rangeFar - A.rangeFar)
                 return camerasChecked[0].rangeFar;
-            }
+            }*/
         }
 
         function createSceneFromWizard(sceneManager)
@@ -131,6 +134,9 @@ class Wizard{
             const camsHeight = Math.round(parseFloat(document.getElementById('input-hook-height-wizard').value) / sceneManager.currentUnit.value * 100) / 100;
             
             const percentOverlapped = parseFloat(document.getElementById('input-percent-overlap-wizard').value) / 100.0;
+
+            const aspectRatio = parseFloat(document.getElementById("aspect-ratio-selection-wizard").value);
+            const opticRatio = parseFloat(document.getElementById("input-optic-ratio-wizard").value);
 
             if(percentOverlapped > 0.99 || percentOverlapped < 0)
             {
@@ -148,76 +154,71 @@ class Wizard{
                 alert("Please fill the hook height from your scene");
                 return;
             }
+            if(!opticRatio || opticRatio <=0)
+            {
+                alert("Invalid VPs optic ratio parameter");
+                return;
+            }
 
             const givenWidth = Math.ceil(inputWidth / sceneManager.currentUnit.value * 100) / 100;
             const givenHeight = Math.ceil(inputHeight / sceneManager.currentUnit.value * 100) / 100;
 
+            const HFov = Math.round(2 * Math.atan(1 / (2 * opticRatio)) * 180 / Math.PI * 100) / 100.0;
+            const VFov = Math.round(2 * Math.atan(1 / (2 * opticRatio * aspectRatio)) * 180 / Math.PI * 100) / 100.0;
+
             let configs = [];
 
-            camerasTypes.filter(c => c.recommended).forEach(type => {
-                if(document.getElementById('check-' + type.id).checked && camsHeight <= type.rangeFar && camsHeight >= type.rangeNear)
+            const totalWidthCovered = Math.abs(Math.tan((HFov/2.0) * Math.PI / 180.0))*(camsHeight) * 2;
+            const totalHeightCovered = Math.abs(Math.tan((VFov/2.0) * Math.PI / 180.0))*(camsHeight) * 2;
+
+            const widthAreaCovered = totalWidthCovered * (1 - percentOverlapped);
+            const heightAreaCovered = totalHeightCovered * (1 - percentOverlapped);
+
+            const nbcamsNoRotWidth = Math.ceil(givenWidth / widthAreaCovered - (percentOverlapped / (1 - percentOverlapped)));
+            const nbCamsNoRotHeight = Math.ceil(givenHeight / heightAreaCovered - (percentOverlapped / (1 - percentOverlapped)));
+            const nbCamsRotWidth = Math.ceil(givenWidth / heightAreaCovered - (percentOverlapped / (1 - percentOverlapped)));
+            const nbCamsRotHeight = Math.ceil(givenHeight / widthAreaCovered - (percentOverlapped / (1 - percentOverlapped)));
+
+            const chosenConfig = nbCamsRotWidth * nbCamsRotHeight < nbcamsNoRotWidth * nbCamsNoRotHeight
+                ?
+                { typeID: 0, w: totalHeightCovered, h: totalWidthCovered, nbW: nbCamsRotWidth, nbH: nbCamsRotHeight, rot: true }
+                :
+                { typeID: 0, w: totalWidthCovered, h: totalHeightCovered, nbW: nbcamsNoRotWidth, nbH: nbCamsNoRotHeight, rot: false };
+
+
+            sceneManager.updateAugmentaSceneBorder(inputWidth, inputHeight);
+
+            sceneManager.objects.removeNodes();
+
+            let offsetX = chosenConfig.w / 2.0;
+            let offsetY = chosenConfig.h / 2.0;
+            if(chosenConfig.nbW === 1) offsetX -= (chosenConfig.nbW*chosenConfig.w - givenWidth)/2.0;
+            if(chosenConfig.nbH === 1) offsetY -= (chosenConfig.nbH*chosenConfig.h - givenHeight)/2.0;
+            const oX = chosenConfig.nbW > 1 ? (chosenConfig.nbW*chosenConfig.w - givenWidth)/(chosenConfig.nbW - 1) : 0;
+            const oY = chosenConfig.nbH > 1 ? (chosenConfig.nbH*chosenConfig.h - givenHeight)/(chosenConfig.nbH - 1) : 0;
+
+            document.getElementById("aspect-ratio-selection-inspector").value = aspectRatio;
+            document.getElementById("input-optic-ratio-inspector").value = opticRatio;
+
+            for(let i = 0; i < chosenConfig.nbW; i++)
+            {
+                for(let j = 0; j < chosenConfig.nbH; j++)
                 {
-                    const totalWidthCovered = Math.abs(Math.tan((type.HFov/2.0) * Math.PI / 180.0))*(camsHeight) * 2;
-                    const totalHeightCovered = Math.abs(Math.tan((type.VFov/2.0) * Math.PI / 180.0))*(camsHeight) * 2;
-
-                    const widthAreaCovered = totalWidthCovered * (1 - percentOverlapped);
-                    const heightAreaCovered = totalHeightCovered * (1 - percentOverlapped);
-
-                    const nbcamsNoRotWidth = Math.ceil(givenWidth / widthAreaCovered - (percentOverlapped / (1 - percentOverlapped)));
-                    const nbCamsNoRotHeight = Math.ceil(givenHeight / heightAreaCovered - (percentOverlapped / (1 - percentOverlapped)));
-                    const nbCamsRotWidth = Math.ceil(givenWidth / heightAreaCovered - (percentOverlapped / (1 - percentOverlapped)));
-                    const nbCamsRotHeight = Math.ceil(givenHeight / widthAreaCovered - (percentOverlapped / (1 - percentOverlapped)));
-
-                    nbCamsRotWidth * nbCamsRotHeight < nbcamsNoRotWidth * nbCamsNoRotHeight
+                    chosenConfig.rot 
                         ?
-                        configs.push({ typeID: type.id, w: totalHeightCovered, h: totalWidthCovered, nbW: nbCamsRotWidth, nbH: nbCamsRotHeight, rot: true })
+                        sceneManager.objects.addNode(true, chosenConfig.typeID, offsetX + i*(chosenConfig.w - oX), camsHeight, offsetY + j*(chosenConfig.h - oY), 0, 0, Math.PI/2.0)
                         :
-                        configs.push({ typeID: type.id, w: totalWidthCovered, h: totalHeightCovered, nbW: nbcamsNoRotWidth, nbH: nbCamsNoRotHeight, rot: false });
+                        sceneManager.objects.addNode(true, chosenConfig.typeID, offsetX + i*(chosenConfig.w - oX), camsHeight, offsetY + j*(chosenConfig.h - oY));
+
                 }
-            });
-
-            if(configs.length === 0)
-            {
-                alert("No sensor is adapted to your demand");
-                return;
             }
-            else
-            {
-                sceneManager.updateAugmentaSceneBorder(inputWidth, inputHeight);
 
-                configs.sort((A,B) => A.nbW * A.nbH - B.nbW * B.nbH);
-                configs = configs.filter(c => c.nbW * c.nbH === configs[0].nbW * configs[0].nbH);
-                configs.sort((A,B) => A.typeID - B.typeID);
-                let chosenConfig = configs[0];
-                sceneManager.objects.removeNodes();
+            // update inspector infos
+            document.getElementById('input-scene-width-inspector').value = inputWidth;
+            document.getElementById('input-scene-height-inspector').value = inputHeight;
 
-                let offsetX = chosenConfig.w / 2.0;
-                let offsetY = chosenConfig.h / 2.0;
-                if(chosenConfig.nbW === 1) offsetX -= (chosenConfig.nbW*chosenConfig.w - givenWidth)/2.0;
-                if(chosenConfig.nbH === 1) offsetY -= (chosenConfig.nbH*chosenConfig.h - givenHeight)/2.0;
-                const oX = chosenConfig.nbW > 1 ? (chosenConfig.nbW*chosenConfig.w - givenWidth)/(chosenConfig.nbW - 1) : 0;
-                const oY = chosenConfig.nbH > 1 ? (chosenConfig.nbH*chosenConfig.h - givenHeight)/(chosenConfig.nbH - 1) : 0;
-
-                for(let i = 0; i < chosenConfig.nbW; i++)
-                {
-                    for(let j = 0; j < chosenConfig.nbH; j++)
-                    {
-                        chosenConfig.rot 
-                            ?
-                            sceneManager.objects.addNode(true, chosenConfig.typeID, offsetX + i*(chosenConfig.w - oX), camsHeight, offsetY + j*(chosenConfig.h - oY), 0, 0, Math.PI/2.0)
-                            :
-                            sceneManager.objects.addNode(true, chosenConfig.typeID, offsetX + i*(chosenConfig.w - oX), camsHeight, offsetY + j*(chosenConfig.h - oY));
-
-                    }
-                }
-
-                // update inspector infos
-                document.getElementById('input-scene-width-inspector').value = inputWidth;
-                document.getElementById('input-scene-height-inspector').value = inputHeight;
-    
-                //placeCamera(new THREE.Vector3(givenWidth, 6, givenHeight));
-                document.getElementById('wizard-modal').classList.add('hidden');
-            }
+            //placeCamera(new THREE.Vector3(givenWidth, 6, givenHeight));
+            document.getElementById('wizard-modal').classList.add('hidden');
         }
     }
 }
